@@ -8,12 +8,13 @@ from django.shortcuts import get_object_or_404
 from django.db import IntegrityError
 from django.contrib.auth.models import User
 from django.utils.decorators import method_decorator
+from django.db.models import get_model
 
 from .models import Device
 from .forms import DeviceForm
 from .decorators import api_authentication_required
 from .http import HttpResponseNotImplemented, JSONResponse
-
+from .settings import get_setting
 
 class BaseResource(object):
     """
@@ -100,8 +101,8 @@ class DeviceResource(BaseResource):
         if 'users' in request.PUT:
             try:
                 user_ids = request.PUT.getlist('users')
-                device.users.remove(*[u.id for u in device.users.all()])
-                device.users.add(*User.objects.filter(id__in=user_ids))
+                device.users.remove(*[u.login for u in device.users.all()])
+                device.users.add(*(get_model(get_setting('AUTH_USER_MODEL'))).objects.filter(login__in=user_ids))
             except (ValueError, IntegrityError) as e:
                 return JSONResponse({'error': e.message}, status=400)
             del request.PUT['users']
